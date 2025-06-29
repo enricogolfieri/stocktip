@@ -9,25 +9,20 @@ class DeepSeekModels(Enum):
 
 
 class DeepSeek:
-    def __init__(
-        self, deepseek_api_key=None, deepseek_model=DeepSeekModels.DEEPSEEK_CHAT
-    ):
+    def __init__(self, deepseek_api_key, deepseek_model=DeepSeekModels.DEEPSEEK_CHAT):
         """Initialize with DeepSeek API key"""
         self.deepseek_api_key = deepseek_api_key
         self.deepseek_model = deepseek_model
 
-    def api_key_exists(self):
-        """Check if DeepSeek API key exists"""
-        return self.deepseek_api_key is not None and self.deepseek_api_key != ""
-
     def test_deepseek_api(self):
         """Test if DeepSeek API key is valid"""
-        if not self.deepseek_api_key:
+        if not self.deepseek_api_key.exists():
             return "Error: DeepSeek API key not found in .env file"
 
         try:
             client = OpenAI(
-                api_key=self.deepseek_api_key, base_url="https://api.deepseek.com"
+                api_key=self.deepseek_api_key.value,
+                base_url="https://api.deepseek.com",
             )
             response = client.chat.completions.create(
                 model="deepseek-chat",
@@ -41,7 +36,7 @@ class DeepSeek:
 
     def send(self, prompt, temperature=0.3, max_tokens=5000):
         client = OpenAI(
-            api_key=self.deepseek_api_key, base_url="https://api.deepseek.com"
+            api_key=self.deepseek_api_key.value, base_url="https://api.deepseek.com"
         )
         # Use r1
         response = client.chat.completions.create(

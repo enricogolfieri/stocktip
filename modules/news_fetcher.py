@@ -10,15 +10,11 @@ class NewsFetcher:
     def __init__(self, news_api_key=None):
         self.news_api_key = news_api_key
 
-    def api_key_exists(self):
-        """Check if NewsAPI key exists"""
-        return self.news_api_key is not None and self.news_api_key != ""
-
     def fetch_news_api(self, symbol, days, max_articles=10):
         articles = []
         try:
             # Method 1: Using NewsAPI (if API key is provided)
-            if self.news_api_key:
+            if self.news_api_key.exists():
                 url = f"https://newsapi.org/v2/everything"
                 params = {
                     "q": f"{symbol} stock OR {symbol} earnings OR {symbol} company",
@@ -28,7 +24,7 @@ class NewsFetcher:
                     "sortBy": "relevancy",
                     "language": "en",
                     "pageSize": 10,
-                    "apiKey": self.news_api_key,
+                    "apiKey": self.news_api_key.value,
                 }
 
                 response = requests.get(url, params=params, timeout=10)

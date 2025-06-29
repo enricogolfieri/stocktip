@@ -3,10 +3,19 @@ from modules.news_fetcher import NewsFetcher
 from modules.deepseek import DeepSeek, DeepSeekModels
 from modules.analyzer import StockAnalyzer
 from dotenv import load_dotenv
-import os
+import modules.key as keys
+import modules.logger as logger
 
-# Load environment variables
-load_dotenv()
+logger.init("GUI")
+
+# API key status check
+engine = DeepSeek(
+    deepseek_api_key=keys.DeepSeekKey(),
+    deepseek_model=DeepSeekModels.DEEPSEEK_CHAT,
+)
+
+analyzer = StockAnalyzer(ai_engine=engine)
+fetcher = NewsFetcher(news_api_key=keys.NewsAPIKey())
 
 
 def main():
@@ -20,26 +29,12 @@ def main():
     # Sidebar for configuration
     st.sidebar.header("Configuration")
 
-    # API key status check
-    engine = DeepSeek(
-        deepseek_api_key=os.getenv("DEEPSEEK_API_KEY"),
-        deepseek_model=DeepSeekModels.DEEPSEEK_CHAT,
-    )
-
-    analyzer = StockAnalyzer(ai_engine=engine)
-    fetcher = NewsFetcher(news_api_key=os.getenv("NEWS_API_KEY"))
-    if engine.api_key_exists():
-        st.sidebar.success("✅ DeepSeek API key loaded")
-        st.sidebar.text(
-            engine.deepseek_api_key[:4] + "..." + engine.deepseek_api_key[-4:]
-        )
-    else:
-        st.sidebar.error("❌ DeepSeek API key missing")
-    if fetcher.api_key_exists():
-        st.sidebar.success("✅ NewsAPI key loaded")
-        st.sidebar.text(fetcher.news_api_key[:4] + "..." + fetcher.news_api_key[-4:])
-    else:
-        st.sidebar.warning("⚠️ NewsAPI key not found. Some news sources may be limited.")
+    for key in keys.iterate_keys():
+        if key.exists():
+            st.sidebar.success(f"✅ {key.description} key loaded")
+            st.sidebar.text(key.value_to_string())
+        else:
+            st.sidebar.error(f"❌ {key.description} key missing")
 
     # Test DeepSeek API
     if st.sidebar.button("🔍 Test DeepSeek API"):
