@@ -5,6 +5,8 @@ from modules.analyzer import StockAnalyzer
 from dotenv import load_dotenv
 import modules.key as keys
 import modules.logger as logger
+import modules.finnhub as finnhub
+import datetime
 
 logger.init("GUI")
 
@@ -16,6 +18,9 @@ engine = DeepSeek(
 
 analyzer = StockAnalyzer(ai_engine=engine)
 fetcher = NewsFetcher(news_api_key=keys.NewsAPIKey())
+finnhub_client = finnhub.Finnhub(
+    key=keys.FinnhubAPIKey(),
+)
 
 
 def main():
@@ -66,11 +71,7 @@ def main():
 
         if analyze_button and symbol:
             articles = []
-            social_data = []  # Placeholder for social sentiment data
             with st.spinner(f"Analyzing {symbol}..."):
-                # Fetch data
-                st.info("📰 Fetching news articles from Yahoo Finance...")
-
                 st.info("📰 Fetching news articles from NewsAPI...")
                 success, newsapi_articles = fetcher.fetch_news_api(symbol, days, 10)
                 if not success:
@@ -85,8 +86,43 @@ def main():
                 else:
                     articles.extend(finviz_articles)
 
+                st.info("📈 Fetching insider sentiment data from Finnhub...")
+                from_date = (
+                    datetime.datetime.now() - datetime.timedelta(days=days)
+                ).strftime("%Y-%m-%d")
+                to_date = datetime.datetime.now().strftime("%Y-%m-%d")
+                success, insider_sentiments = (
+                    finnhub_client.get_stock_insider_sentiment(
+                        symbol,
+                        from_date,
+                        to_date,
+                    )
+                )
+
+                if not success:
+                    st.error(f"Error fetching insider sentiment: {insider_sentiments}")
+                else:
+                    st.success("✅ Insider sentiment data fetched successfully")
+                    logger.info(
+                        f"Number of Insider Transactions for {symbol}: {len(insider_sentiments)}"
+                    )
+
+                st.info("📊 Fetching analyst sentiment data from Finnhub...")
+                success, analyst_sentiments = (
+                    finnhub_client.get_stock_recommendations_trends(symbol)
+                )
+                if not success:
+                    st.error(f"Error fetching analyst sentiment: {analyst_sentiments}")
+                else:
+                    st.success("✅ Analyst sentiment data fetched successfully")
+                    logger.info(
+                        f"Number of Analyst Recommendations for {symbol}: {len(analyst_sentiments)}"
+                    )
+
                 st.info("🤖 Getting AI analysis from DeepSeek...")
-                analysis = analyzer.analyze(symbol, articles, social_data)
+                analysis = analyzer.analyze(
+                    symbol, articles, insider_sentiments, analyst_sentiments
+                )
 
             # Display results
             if isinstance(analysis, dict):
@@ -139,8 +175,13 @@ def main():
                     st.write("No articles found for this symbol.")
 
             with st.expander("📱 Social Sentiment Data"):
-                for i, social in enumerate(social_data, 1):
-                    st.write(f"{i}. {social}")
+                for doc in insider_sentiments:
+                    # print the json document
+                    st.json(doc)
+
+                for doc in analyst_sentiments:
+                    # print the json document
+                    st.json(doc)
 
     # Footer
     st.markdown("---")

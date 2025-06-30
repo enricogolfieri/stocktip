@@ -1,4 +1,5 @@
 import json
+import datetime
 
 
 class StockAnalyzer:
@@ -6,11 +7,19 @@ class StockAnalyzer:
         """Initialize with DeepSeek API key"""
         self.ai_engine = ai_engine
 
-    def prompt(self, symbol, content):
+    def prompt(self, symbol, news_articles, insider_sentiments, analyst_sentiments):
+        today_string = datetime.datetime.today().strftime("%Y-%m-%d")
         return f"""
         As a financial analyst, analyze the following information about {symbol} stock and provide a trading recommendation.
-        
-        {content}
+        You will receive 
+        - recent news articles about the stock
+        - insider sentiment trends
+        - analyst sentiment trends 
+
+        insider sentiment trend is calculated as following:
+        Finnhub’s insider trading API gathers data whenever a stakeholder purchases or sells their stocks from their disclosure in Form 3,4,5 with the SEC. During COVID19, executives may hold their assets until Fall 2021, when some positive signal appeared. This habit can be interpreted as an insightful signal for a trader. Instead of relying on simple price information, joining insiders during their trading actions can significantly improve retail investors’ investments return. Thus, the monthly share purchase ratio (MSPR) is introduced to signal insider trading events quantitatively.
+
+        Today is {today_string}
         
         Based on this information, provide:
         1. A trading signal: STRONG BUY, BUY, HOLD, SELL, or STRONG SELL
@@ -27,9 +36,20 @@ class StockAnalyzer:
             "risks": ["risk1", "risk2"],
             "summary": "Brief explanation of the recommendation"
         }}
+
+        NEWS ARTICLES:
+        {news_articles}
+
+        INSIDER SENTIMENTS:
+        {insider_sentiments}
+
+        ANALYST SENTIMENTS:
+        {analyst_sentiments}
         """
 
-    def analyze(self, symbol, articles: list, social_data: list):
+    def analyze(
+        self, symbol, articles: list, insider_sentiments: list, analyst_sentiment: list
+    ):
         """Use AI engine to analyze the collected data and provide trading signal"""
 
         if not self.ai_engine:
@@ -44,14 +64,15 @@ class StockAnalyzer:
                 content += f"   {article['content'][:200]}...\n"
             content += f"   Source: {article['source']}\n\n"
 
-        content += "\nSocial Media Sentiment:\n"
-        for i, social in enumerate(social_data, 1):
-            content += f"{i}. {social}\n"
-
-        prompt = self.prompt(symbol, content)
+        prompt = self.prompt(
+            symbol,
+            content,
+            insider_sentiments,
+            analyst_sentiment,
+        )
 
         try:
-            response = self.ai_engine.send(prompt)
+            response = self.ai_engine.send(prompt, max_tokens=10000, temperature=0.3)
             # Try to parse JSON response
             try:
                 # Extract JSON from the response

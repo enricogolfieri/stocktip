@@ -61,3 +61,9 @@ class NewsAPIKey(Key):
     def __init__(self):
         """Initialize with NewsAPI key"""
         super().__init__("NEWS_API_KEY", "NewsAPI Key")
+
+
+class FinnhubAPIKey(Key):
+    def __init__(self):
+        """Initialize with Finnhub key"""
+        super().__init__("FINNHUB_API_KEY", "Finnhub API Key")
